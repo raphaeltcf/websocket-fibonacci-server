@@ -25,9 +25,9 @@ Antes de começar, você precisará ter as seguintes ferramentas instaladas em s
 - [Python](https://www.python.org/) 
 - [Docker](https://www.docker.com/)
 
-. Acesso às portas 8765 (para o servidor WebSocket) e 27017 (para o MongoDB)
-. Aproximadamente 1GB de espaço livre em disco para os containers e volume do MongoDB
-. Renomear o arquivo .env.example para .env e configurar as variáveis de ambiente necessárias
+- Acesso às portas 8765 (para o servidor WebSocket) e 27017 (para o MongoDB) 
+- Aproximadamente 1GB de espaço livre em disco para os containers e volume do MongoDB
+- Renomear o arquivo .env.example para .env e configurar as variáveis de ambiente necessárias
 
 Também é bom ter um editor para trabalhar com o código como [VSCode](https://code.visualstudio.com/)
 
