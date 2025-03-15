@@ -16,6 +16,7 @@ class WebSocketClient:
         self.connected = False
         self.running = True
         self.current_time = ""
+        self.time_update_pending = False
         
         self.message_handlers: Dict[str, Callable] = {
             "welcome": self._handle_welcome,
@@ -66,7 +67,10 @@ class WebSocketClient:
         print(f"\n{data.get('message')}")
 
     async def _handle_time_update(self, data: Dict[str, Any]):
+        # Apenas armazenar o valor, não imprimir imediatamente
         self.current_time = data.get("time", "")
+        # Marcar que temos uma atualização de hora pendente
+        self.time_update_pending = True
 
     async def _handle_fibonacci_result(self, data: Dict[str, Any]):
         print(f"\nFibonacci({data.get('n')}) = {data.get('result')}")

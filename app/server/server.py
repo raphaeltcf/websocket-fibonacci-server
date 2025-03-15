@@ -23,6 +23,8 @@ class WebSocketServer:
         self.connected_clients: Dict[str, websockets.WebSocketServerProtocol] = {}
         self.server = None
         self.running = True
+        # Armazenar a última hora enviada para cada cliente
+        self.last_time_sent = {}
     
     async def handle_client(self, websocket):
         client_id = f"client_{id(websocket)}"
@@ -38,6 +40,14 @@ class WebSocketServer:
                 "message": f"Bem-vindo ao servidor WebSocket! Seu ID é {client_id}",
                 "client_id": client_id
             }))
+            
+            # Enviar hora atual inicial para o cliente
+            current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            await websocket.send(json.dumps({
+                "type": "time_update",
+                "time": current_time
+            }))
+            self.last_time_sent[client_id] = current_time
             
             async for message in websocket:
                 try:
@@ -97,6 +107,8 @@ class WebSocketServer:
         finally:
             if client_id in self.connected_clients:
                 del self.connected_clients[client_id]
+            if client_id in self.last_time_sent:
+                del self.last_time_sent[client_id]
             remove_user_from_db(client_id)
             logger.info(f"Cliente {client_id} desconectado.")
     
@@ -112,16 +124,22 @@ class WebSocketServer:
                 disconnected = []
                 for client_id, websocket in self.connected_clients.items():
                     try:
-                        await websocket.send(message)
+                        # Enviar apenas se a hora mudou desde a última vez
+                        if client_id not in self.last_time_sent or self.last_time_sent[client_id] != current_time:
+                            await websocket.send(message)
+                            self.last_time_sent[client_id] = current_time
                     except websockets.exceptions.ConnectionClosed:
                         disconnected.append(client_id)
                 
                 for client_id in disconnected:
                     if client_id in self.connected_clients:
                         del self.connected_clients[client_id]
+                    if client_id in self.last_time_sent:
+                        del self.last_time_sent[client_id]
                     remove_user_from_db(client_id)
                     logger.info(f"Cliente {client_id} removido (conexão fechada durante broadcast).")
             
+            # Manter intervalo de 1 segundo para atender ao requisito
             await asyncio.sleep(1)
     
     async def start(self):
