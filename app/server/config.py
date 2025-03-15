@@ -11,13 +11,11 @@ MONGO_PORT = int(os.getenv("MONGO_PORT", 27017))
 MONGO_DB = os.getenv("MONGO_DB", "websocket_db")
 MONGO_COLLECTION = os.getenv("MONGO_COLLECTION", "connected_users")
 
-# Conexão ao banco como administrador (root)
 MONGO_URI = f"mongodb://{MONGO_USER}:{MONGO_PASSWORD}@{MONGO_HOST}:{MONGO_PORT}/{MONGO_DB}?authSource=admin"
 
 try:
     client = MongoClient(MONGO_URI)
     db = client[MONGO_DB]
-    # Verifica se a coleção existe e a cria se não existir
     if MONGO_COLLECTION not in db.list_collection_names():
         db.create_collection(MONGO_COLLECTION)
     print("✅ Conectado ao MongoDB com sucesso!")
