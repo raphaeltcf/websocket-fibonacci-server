@@ -97,17 +97,14 @@ class WebSocketClient:
             print("\nNenhum usuário conectado.")
             return
 
-        # Garantir que começamos com uma linha limpa
         print("\rUsuários conectados:", flush=True)
         
         for user in users:
             username = user.get("username", "N/A")
             online_time = user.get("online_time", "N/A")
             
-            # Usar \r para garantir que começamos na primeira coluna
             print(f"\r{username} - online há {online_time}", flush=True)
         
-        # Adicionar uma linha em branco no final
         print()
 
     async def _handle_unknown(self, data: Dict[str, Any]):

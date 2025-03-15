@@ -89,17 +89,14 @@ def set_user_offline(user_id):
 
 def update_user_activity(user_id):
     try:
-        # Verificar se o usuário existe
         user = collection.find_one({'id': user_id})
         if not user:
             logger.warning(f"Usuário {user_id} não encontrado para atualização de atividade.")
             return False
             
-        # Registrar o timestamp antigo para diagnóstico
         old_timestamp = user.get('last_active')
         current_time = datetime.datetime.now()
         
-        # Atualizar a atividade
         result = collection.update_one(
             {'id': user_id},
             {'$set': {
@@ -156,14 +153,11 @@ def get_all_users():
         return []
 
 def mark_inactive_users_as_offline(inactive_minutes=5):
-    """Marca usuários que não tiveram atividade recente como offline."""
     try:
         cutoff_time = datetime.datetime.now() - datetime.timedelta(minutes=inactive_minutes)
-        
-        # Log para debug
+
         logger.info(f"Procurando usuários inativos desde: {cutoff_time}")
         
-        # Encontrar usuários inativos que ainda estão marcados como online
         inactive_users = list(collection.find({
             'online': True,
             'last_active': {'$lt': cutoff_time}
