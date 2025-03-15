@@ -10,6 +10,14 @@ services:
       - "8765:8765"
     depends_on:
       - websocket-mongodb
+    environment:
+      - MONGO_USER=admin
+      - MONGO_PASSWORD=password
+      - MONGO_DB=websocket_db
+      - MONGO_HOST=websocket-mongodb
+      - MONGO_PORT=27017
+      - SERVER_HOST=0.0.0.0
+      - SERVER_PORT=8765
 
   websocket-mongodb:
     image: mongo:latest
@@ -18,6 +26,13 @@ services:
       - websocket-network
     ports:
       - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=password
+      - MONGO_INITDB_DATABASE=websocket_db
+    volumes:
+      - mongodb_data:/data/db
+    command: mongod --auth
 
   websocket-client:
     build: .
@@ -26,8 +41,11 @@ services:
       - websocket-network
     depends_on:
       - websocket-server
-    entrypoint: ["python", "/app/websocket_project/client/main.py"]
+    entrypoint: ["python", "/core/app/client/main.py"]
 
 networks:
   websocket-network:
     driver: bridge
+
+volumes:
+  mongodb_data:

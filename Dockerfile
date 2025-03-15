@@ -1,13 +1,13 @@
 FROM python:3.10
 
-WORKDIR /app
+WORKDIR /core
 
-COPY requirements.txt docker-compose.yml Dockerfile .env /app/
-COPY websocket_project /app/websocket_project
+COPY requirements.txt docker-compose.yml Dockerfile .env /core/
+COPY app /core/app
 
 RUN pip install --no-cache-dir -r requirements.txt
 
-WORKDIR /app/websocket_project/server
+WORKDIR /core/app/server
 
 EXPOSE 8765
 
