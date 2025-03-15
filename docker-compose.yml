@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  websocket-server:
+    build: .
+    container_name: websocket-server
+    networks:
+      - websocket-network
+    ports:
+      - "8765:8765"
+    depends_on:
+      - websocket-mongodb
+
+  websocket-mongodb:
+    image: mongo:latest
+    container_name: websocket-mongodb
+    networks:
+      - websocket-network
+    ports:
+      - "27017:27017"
+
+  websocket-client:
+    build: .
+    container_name: websocket-client
+    networks:
+      - websocket-network
+    depends_on:
+      - websocket-server
+    entrypoint: ["python", "/app/websocket_project/client/main.py"]
+
+networks:
+  websocket-network:
+    driver: bridge

@@ -1,6 +1,3 @@
-"""
-Implementação do cliente WebSocket.
-"""
 import asyncio
 import json
 import websockets
@@ -10,15 +7,8 @@ from typing import Optional, Dict, Any, Callable
 logger = logging.getLogger('websocket_client.client')
 
 class WebSocketClient:
-    """Cliente WebSocket para conexão com o servidor"""
     
     def __init__(self, uri: str = "ws://localhost:8765"):
-        """
-        Inicializa o cliente WebSocket
-        
-        Args:
-            uri: Endereço do servidor WebSocket
-        """
         self.uri = uri
         self.websocket: Optional[websockets.WebSocketClientProtocol] = None
         self.client_id: Optional[str] = None
@@ -27,7 +17,6 @@ class WebSocketClient:
         self.running = True
         self.current_time = ""
         
-        # Dicionário para manipuladores de mensagens
         self.message_handlers: Dict[str, Callable] = {
             "welcome": self._handle_welcome,
             "time_update": self._handle_time_update,
@@ -37,7 +26,6 @@ class WebSocketClient:
         }
     
     async def connect(self):
-        """Estabelece conexão com o servidor WebSocket"""
         try:
             self.websocket = await websockets.connect(self.uri)
             self.connected = True
@@ -48,14 +36,12 @@ class WebSocketClient:
             return False
     
     async def disconnect(self):
-        """Desconecta do servidor WebSocket"""
         if self.websocket and self.connected:
             await self.websocket.close()
             self.connected = False
             logger.info("Desconectado do servidor")
     
     async def send_message(self, message_data: dict):
-        """Envia uma mensagem para o servidor"""
         if not self.connected or not self.websocket:
             logger.error("Não conectado ao servidor")
             return False
@@ -70,42 +56,32 @@ class WebSocketClient:
             return False
     
     async def calculate_fibonacci(self, n: int):
-        """Solicita o cálculo de Fibonacci ao servidor"""
         return await self.send_message({"type": "fibonacci", "n": n})
     
     async def update_username(self, new_username: str):
-        """Atualiza o nome de usuário no servidor"""
         return await self.send_message({"type": "update_username", "username": new_username})
-    
-    # Manipuladores de mensagens
+
     async def _handle_welcome(self, data: Dict[str, Any]):
-        """Processa mensagem de boas-vindas"""
         self.client_id = data.get("client_id")
         print(f"\n{data.get('message')}")
 
     async def _handle_time_update(self, data: Dict[str, Any]):
-        """Apenas armazena a hora do servidor sem exibir imediatamente"""
         self.current_time = data.get("time", "")
 
     async def _handle_fibonacci_result(self, data: Dict[str, Any]):
-        """Processa resultado do cálculo de Fibonacci"""
         print(f"\nFibonacci({data.get('n')}) = {data.get('result')}")
     
     async def _handle_username_updated(self, data: Dict[str, Any]):
-        """Processa atualização de nome de usuário"""
         self.username = data.get("username")
         print(f"\nNome de usuário atualizado para: {self.username}")
     
     async def _handle_error(self, data: Dict[str, Any]):
-        """Processa mensagem de erro"""
         print(f"\nErro: {data.get('message', 'Erro desconhecido')}")
 
     async def _handle_unknown(self, data: Dict[str, Any]):
-        """Processa mensagens de tipo desconhecido"""
         print(f"\nMensagem recebida: {data}")
     
     async def receive_messages(self):
-        """Recebe e processa mensagens do servidor"""
         if not self.connected or not self.websocket:
             logger.error("Não conectado ao servidor")
             return
