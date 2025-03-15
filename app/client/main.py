@@ -22,7 +22,6 @@ def exit_handler():
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
-            loop.run_until_complete(client.send_disconnect_signal())
             loop.run_until_complete(client.disconnect())
         except Exception as e:
             logger.error(f"Erro durante saída: {str(e)}")
@@ -35,9 +34,6 @@ def handle_shutdown(signum, frame):
     logger.info(f"Sinal recebido {signum}, iniciando desligamento...")
     if client:
         client.running = False
-        loop = asyncio.get_event_loop()
-        if loop.is_running():
-            loop.create_task(client.send_disconnect_signal())
         logger.info("Cliente está sendo encerrado...")
 
 async def main():
@@ -67,7 +63,6 @@ async def main():
     try:
         await cli_task
     finally:
-        await client.send_disconnect_signal()
         await client.disconnect()
         receive_task.cancel()
         
