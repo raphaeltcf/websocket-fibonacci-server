@@ -20,14 +20,10 @@ Estas instruções permitirão que você obtenha uma cópia de trabalho do proje
 ### 📋 Pré-requisitos
 
 Antes de começar, você precisará ter as seguintes ferramentas instaladas em sua máquina:
-
-[Git](https://git-scm.com), 
-
-[MongoDB]([https://www.mongodb.com/]), 
-
-[Python](https://www.python.org/) e
-
-[Docker](https://www.docker.com/).
+.[Git](https://git-scm.com), 
+.[MongoDB]([https://www.mongodb.com/]), 
+.[Python](https://www.python.org/) e
+.[Docker](https://www.docker.com/).
 
 Acesso às portas 8765 (para o servidor WebSocket) e 27017 (para o MongoDB)
 Aproximadamente 1GB de espaço livre em disco para os containers e volume do MongoDB
