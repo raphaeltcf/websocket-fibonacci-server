@@ -20,6 +20,7 @@ Estas instruções permitirão que você obtenha uma cópia de trabalho do proje
 ### 📋 Pré-requisitos
 
 Antes de começar, você precisará ter as seguintes ferramentas instaladas em sua máquina:
+
 [Git](https://git-scm.com), 
 
 [MongoDB]([https://www.mongodb.com/]), 
