@@ -33,7 +33,7 @@ Também é bom ter um editor para trabalhar com o código como [VSCode](https://
 *******
 <div id='funcionando'/>  
 
-### 🎲 Colocando o Chatbot para funcionar:
+### 🎲 Colocando o WebSocket para funcionar:
 
 ```bash
 # Clone o repositorio
