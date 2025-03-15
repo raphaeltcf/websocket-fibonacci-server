@@ -1,5 +1,5 @@
 import logging
-# Em config.py do cliente
+
 DEFAULT_URI = "ws://websocket-server:8765"
 
 

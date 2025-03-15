@@ -30,7 +30,9 @@ def add_user_to_db(user_id, username):
         'id': user_id,
         'username': username,
         'connected_at': current_time,
-        'last_active': current_time
+        'last_active': current_time,
+        'online': True,
+        'disconnected_at': None
     }
     
     try:
@@ -65,18 +67,52 @@ def remove_user_from_db(user_id):
     except PyMongoError as e:
         logger.error(f"Erro ao remover usuário do banco de dados: {str(e)}")
         return False
-
-def update_user_activity(user_id):
+    
+def set_user_offline(user_id):
     try:
+        current_time = datetime.datetime.now()
         result = collection.update_one(
             {'id': user_id},
-            {'$set': {'last_active': datetime.datetime.now()}}
+            {'$set': {'online': False, 'disconnected_at': current_time}}
         )
         
         if result.modified_count > 0:
+            logger.info(f"Usuário {user_id} atualizado para offline.")
             return True
         else:
+            logger.warning(f"Usuário {user_id} não encontrado para atualização de status.")
+            return False
+            
+    except PyMongoError as e:
+        logger.error(f"Erro ao atualizar status do usuário: {str(e)}")
+        return False
+
+def update_user_activity(user_id):
+    try:
+        # Verificar se o usuário existe
+        user = collection.find_one({'id': user_id})
+        if not user:
             logger.warning(f"Usuário {user_id} não encontrado para atualização de atividade.")
+            return False
+            
+        # Registrar o timestamp antigo para diagnóstico
+        old_timestamp = user.get('last_active')
+        current_time = datetime.datetime.now()
+        
+        # Atualizar a atividade
+        result = collection.update_one(
+            {'id': user_id},
+            {'$set': {
+                'last_active': current_time,
+                'online': True
+            }}
+        )
+        
+        if result.modified_count > 0:
+            logger.info(f"Atividade do usuário {user_id} atualizada: {old_timestamp} -> {current_time}")
+            return True
+        else:
+            logger.warning(f"Atualização de atividade para {user_id} não modificou nenhum documento.")
             return False
             
     except PyMongoError as e:
@@ -103,16 +139,62 @@ def update_username(user_id, new_username):
 
 def get_all_connected_users():
     try:
-
-        users = list(collection.find({}, {'_id': 0}))  
+        users = list(collection.find({'online': True}, {'_id': 0}))  
         return users
         
     except PyMongoError as e:
         logger.error(f"Erro ao recuperar usuários conectados: {str(e)}")
         return []
+    
+def get_all_users():
+    try:
+        users = list(collection.find({}, {'_id': 0}))  
+        return users
+        
+    except PyMongoError as e:
+        logger.error(f"Erro ao recuperar usuários: {str(e)}")
+        return []
+
+def mark_inactive_users_as_offline(inactive_minutes=5):
+    """Marca usuários que não tiveram atividade recente como offline."""
+    try:
+        cutoff_time = datetime.datetime.now() - datetime.timedelta(minutes=inactive_minutes)
+        
+        # Log para debug
+        logger.info(f"Procurando usuários inativos desde: {cutoff_time}")
+        
+        # Encontrar usuários inativos que ainda estão marcados como online
+        inactive_users = list(collection.find({
+            'online': True,
+            'last_active': {'$lt': cutoff_time}
+        }))
+        
+        if inactive_users:
+            for user in inactive_users:
+                logger.info(f"Usuário inativo encontrado: {user['username']} ({user['id']}), último ativo: {user['last_active']}")
+        
+        result = collection.update_many(
+            {
+                'online': True,
+                'last_active': {'$lt': cutoff_time}
+            },
+            {
+                '$set': {
+                    'online': False,
+                    'disconnected_at': datetime.datetime.now()
+                }
+            }
+        )
+        
+        count = result.modified_count
+        if count > 0:
+            logger.info(f"Marcados {count} usuários inativos como offline")
+        return count
+    except PyMongoError as e:
+        logger.error(f"Erro ao marcar usuários inativos: {str(e)}")
+        return 0
 
 def close_connection():
-
     try:
         client.close()
         logger.info("Conexão com MongoDB fechada.")
