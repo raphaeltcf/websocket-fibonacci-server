@@ -73,6 +73,12 @@ class InteractiveConsole:
             self.exit, 
             "Encerra o cliente"
         )
+
+        self.register_command(
+            "usuarios", 
+            self.list_users, 
+            "Mostra a lista de usuários conectados"
+        )
         
         self.register_command(
             "limpar", 
@@ -118,6 +124,10 @@ class InteractiveConsole:
         
         new_name = " ".join(args)
         await self.client.update_username(new_name)
+        return True
+    
+    async def list_users(self, args: List[str] = None):
+        await self.client.list_users()
         return True
     
     async def show_status(self, args: List[str] = None):

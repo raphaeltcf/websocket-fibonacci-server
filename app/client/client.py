@@ -23,6 +23,7 @@ class WebSocketClient:
             "time_update": self._handle_time_update,
             "fibonacci_result": self._handle_fibonacci_result,
             "username_updated": self._handle_username_updated,
+            "users_list": self._handle_users_list,
             "error": self._handle_error
         }
     
@@ -62,7 +63,11 @@ class WebSocketClient:
     async def update_username(self, new_username: str):
         return await self.send_message({"type": "update_username", "username": new_username})
 
+    async def list_users(self):
+        return await self.send_message({"type": "list_users"})
+
     async def _handle_welcome(self, data: Dict[str, Any]):
+        
         self.client_id = data.get("client_id")
         print(f"\n{data.get('message')}")
 
@@ -81,6 +86,26 @@ class WebSocketClient:
     
     async def _handle_error(self, data: Dict[str, Any]):
         print(f"\nErro: {data.get('message', 'Erro desconhecido')}")
+
+    async def _handle_users_list(self, data: Dict[str, Any]):
+        users = data.get("users", [])
+
+        if not users:
+            print("\nNenhum usuário conectado.")
+            return
+
+        # Garantir que começamos com uma linha limpa
+        print("\rUsuários conectados:", flush=True)
+        
+        for user in users:
+            username = user.get("username", "N/A")
+            online_time = user.get("online_time", "N/A")
+            
+            # Usar \r para garantir que começamos na primeira coluna
+            print(f"\r{username} - online há {online_time}", flush=True)
+        
+        # Adicionar uma linha em branco no final
+        print()
 
     async def _handle_unknown(self, data: Dict[str, Any]):
         print(f"\nMensagem recebida: {data}")
