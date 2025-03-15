@@ -1,4 +1,4 @@
-# 🧦 Loomi Store
+# 🧦 WebSocket Fibonacci
 
 Um cliente-servidor WebSocket em Python que permite cálculos de Fibonacci e troca de mensagens em tempo real entre múltiplos usuários. Desenvolvido com asyncio para operações assíncronas, MongoDB para persistência de dados e containerizado com Docker para fácil implantação e execução.
 
