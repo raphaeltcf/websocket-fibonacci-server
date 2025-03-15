@@ -39,7 +39,6 @@ Também é bom ter um editor para trabalhar com o código como [VSCode](https://
 # Clone o repositorio
 $ git clone https://github.com/raphaeltcf/websocket-fibonacci-server
 ```
-## Usando Docker:
 
 ### No Docker
 ```bash
