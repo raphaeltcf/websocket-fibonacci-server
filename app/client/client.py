@@ -64,12 +64,15 @@ class WebSocketClient:
 
     async def _handle_welcome(self, data: Dict[str, Any]):
         self.client_id = data.get("client_id")
-        print(f"\n{data.get('message')}")
+        
+        print("\nCONEXÃO ESTABELECIDA")
+        print(f"Você está conectado ao servidor WebSocket: {self.uri}")
+        print(f"Seu ID de cliente é: {self.client_id}")
+        print("Use o comando 'usuarios' para ver quem mais está online.")
+        print("Use o comando 'hora' para verificar a hora atual do servidor.")
 
     async def _handle_time_update(self, data: Dict[str, Any]):
-        # Apenas armazenar o valor, não imprimir imediatamente
         self.current_time = data.get("time", "")
-        # Marcar que temos uma atualização de hora pendente
         self.time_update_pending = True
 
     async def _handle_fibonacci_result(self, data: Dict[str, Any]):
