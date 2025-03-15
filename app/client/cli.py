@@ -171,13 +171,11 @@ class InteractiveConsole:
         if not command_input.strip():
             return True
         
-        # Marcar que estamos executando um comando
         self.in_command_execution = True
         
-        # Exibir hora atual ao processar comandos - mantendo comportamento original
         if self.client.current_time:
             print(f"\nHora do servidor: {self.client.current_time}")
-            # Resetar flag de atualização pendente
+
             self.client.time_update_pending = False
 
         self.command_history.append(command_input)
@@ -209,29 +207,24 @@ class InteractiveConsole:
         history_position = -1
         cursor_position = 0
         
-        # Variável para controlar quando foi a última verificação de hora
         last_time_check = time.time()
         
         while True:
-            # Verificar atualizações de hora apenas a cada 500ms para não sobrecarregar o terminal
             current_time = time.time()
             if current_time - last_time_check > 0.5:
                 last_time_check = current_time
                 
-                # Se há uma atualização de hora pendente e não estamos no meio da execução de um comando
-                # e não estamos digitando ativamente (último caractere há mais de 1s)
                 if (self.client.time_update_pending and 
                     not self.in_command_execution and 
                     current_time - self.last_input_time > 1.0 and
-                    not buffer):  # Não interromper se estiver digitando
+                    not buffer): 
                     
-                    # Restaurar terminal para imprimir a hora
                     fd = sys.stdin.fileno()
                     old_settings = termios.tcgetattr(fd)
                     try:
                         termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
                         print(f"\rHora do servidor: {self.client.current_time}")
-                        print("> " + buffer, end="", flush=True)  # Restaurar prompt
+                        print("> " + buffer, end="", flush=True)
                         self.client.time_update_pending = False
                     finally:
                         termios.tcsetattr(fd, termios.TCSAFLUSH, old_settings)
@@ -243,11 +236,11 @@ class InteractiveConsole:
                 readable, _, _ = select.select([sys.stdin], [], [], 0.1)
                 
                 if not readable:
-                    await asyncio.sleep(0.05)  # Reduzir tempo de espera para melhorar responsividade
+                    await asyncio.sleep(0.05) 
                     continue
                 
                 ch = sys.stdin.read(1)
-                self.last_input_time = time.time()  # Registrar último tempo de entrada
+                self.last_input_time = time.time() 
                 
                 if ch == '\r':
                     termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
@@ -346,9 +339,41 @@ class InteractiveConsole:
     
     async def run(self):
         self._clear_screen()
-        print("Cliente WebSocket - Digite comandos ou 'ajuda' para ver as opções disponíveis")
-        print("Para verificar a hora atual, digite o comando 'hora'")
-        print("O servidor envia atualizações de hora a cada segundo")
+        print("CLIENTE WEBSOCKET INTERATIVO")
+        print("")
+        print("Bem-vindo ao sistema de comunicação em tempo real via WebSocket!")
+        print("")
+        print("Funcionalidades principais:")
+        print("• O servidor envia atualizações de hora automaticamente a cada segundo")
+        print("• Você pode calcular sequências de Fibonacci rapidamente")
+        print("• Veja quais usuários estão conectados no momento")
+        print("• As setas ↑↓ permitem navegar no histórico de comandos")
+        print("• Pressione Ctrl+C para cancelar uma operação em andamento")
+        print("")
+        print("Comandos disponíveis:")
+        
+        commands_list = sorted(self.commands.items())
+        half = len(commands_list) // 2 + len(commands_list) % 2
+        
+        for i in range(half):
+            left_cmd = commands_list[i]
+            left_usage = left_cmd[1].usage
+            left_desc = left_cmd[1].description
+            
+            left_part = f"  {left_usage:14} - {left_desc}"
+            
+            if i + half < len(commands_list):
+                right_cmd = commands_list[i + half]
+                right_usage = right_cmd[1].usage
+                right_desc = right_cmd[1].description
+                right_part = f"  {right_usage:14} - {right_desc}"
+                print(f"{left_part:50} {right_part}")
+            else:
+                print(left_part)
+        
+        print("")
+        print("Inicie digitando um comando ou 'ajuda' para ver estas instruções novamente.")
+        print("")
         
         while self.client.running:
             try:
