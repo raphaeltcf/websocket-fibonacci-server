@@ -107,25 +107,25 @@ class InteractiveConsole:
     async def fibonacci(self, args: List[str]):
         if not args:
             print("\nUso correto: fib <número>")
-            return True
+            return False  
         
         try:
             n = int(args[0])
-            await self.client.calculate_fibonacci(n)
+            success = await self.client.calculate_fibonacci(n)
+            return success  
         except ValueError:
             print("\nErro: O valor de n deve ser um número inteiro.")
+            return False 
         
-        return True
-    
     async def update_username(self, args: List[str]):
         if not args:
             print("\nUso correto: nome <novo_nome>")
-            return True
+            return False 
         
         new_name = " ".join(args)
-        await self.client.update_username(new_name)
-        return True
-    
+        success = await self.client.update_username(new_name)
+        return success  
+        
     async def list_users(self, args: List[str] = None):
         await self.client.list_users()
         return True
@@ -206,136 +206,240 @@ class InteractiveConsole:
         buffer = ""
         history_position = -1
         cursor_position = 0
-        
         last_time_check = time.time()
         
         while True:
             current_time = time.time()
-            if current_time - last_time_check > 0.5:
+            if self._should_update_time_display(current_time, last_time_check, buffer):
                 last_time_check = current_time
-                
-                if (self.client.time_update_pending and 
-                    not self.in_command_execution and 
-                    current_time - self.last_input_time > 1.0 and
-                    not buffer): 
-                    
-                    fd = sys.stdin.fileno()
-                    old_settings = termios.tcgetattr(fd)
-                    try:
-                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                        print(f"\rHora do servidor: {self.client.current_time}")
-                        print("> " + buffer, end="", flush=True)
-                        self.client.time_update_pending = False
-                    finally:
-                        termios.tcsetattr(fd, termios.TCSAFLUSH, old_settings)
+                self._display_server_time(buffer)
             
-            fd = sys.stdin.fileno()
-            old_settings = termios.tcgetattr(fd)
-            try:
-                tty.setraw(fd)
-                readable, _, _ = select.select([sys.stdin], [], [], 0.1)
+            char, action = await self._read_keyboard_input()
+            
+            if action == "return":
+                return buffer
+            elif action == "cancel":
+                return ""
+            elif action == "none":
+                continue
                 
-                if not readable:
-                    await asyncio.sleep(0.05) 
-                    continue
-                
-                ch = sys.stdin.read(1)
-                self.last_input_time = time.time() 
-                
-                if ch == '\r':
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                    print("\r")  
-                    return buffer
-                
-                elif ch in ('\x7f', '\b'):
-                    if cursor_position > 0:
-                        buffer = buffer[:cursor_position-1] + buffer[cursor_position:]
-                        cursor_position -= 1
-
-                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                        sys.stdout.write("\r\033[K") 
-                        sys.stdout.write(f"> {buffer}")
-
-                        if cursor_position < len(buffer):
-                            sys.stdout.write(f"\033[{len(buffer) - cursor_position}D")
-                        sys.stdout.flush()
-                
-                elif ch == '\x03':
-                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                    print("\r\nOperação cancelada.")
-                    return ""
-                
-                elif ch == '\x1b':
-                    next_chars = ""
-                    readable, _, _ = select.select([sys.stdin], [], [], 0.1)
-                    if readable:
-                        next_chars += sys.stdin.read(1)
-                        if next_chars == '[':
-                            readable, _, _ = select.select([sys.stdin], [], [], 0.1)
-                            if readable:
-                                next_chars += sys.stdin.read(1)
-                                
-                                if next_chars == '[A':
-                                    if self.command_history and history_position < len(self.command_history) - 1:
-                                        history_position += 1
-                                        buffer = self.command_history[-(history_position+1)]
-                                        cursor_position = len(buffer)
-                                        
-                                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                                        sys.stdout.write("\r\033[K") 
-                                        sys.stdout.write(f"> {buffer}")
-                                        sys.stdout.flush()
-                                
-                                elif next_chars == '[B':
-                                    if history_position > 0:
-                                        history_position -= 1
-                                        buffer = self.command_history[-(history_position+1)]
-                                    else:
-                                        history_position = -1
-                                        buffer = ""
-                                    
-                                    cursor_position = len(buffer)
-                                    
-                                    termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                                    sys.stdout.write("\r\033[K")  
-                                    sys.stdout.write(f"> {buffer}")
-                                    sys.stdout.flush()
-                                
-                                elif next_chars == '[C':
-                                    if cursor_position < len(buffer):
-                                        cursor_position += 1
-                                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                                        sys.stdout.write("\033[C")
-                                        sys.stdout.flush()
-                                
-                                elif next_chars == '[D':
-                                    if cursor_position > 0:
-                                        cursor_position -= 1
-
-                                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                                        sys.stdout.write("\033[D")
-                                        sys.stdout.flush()
-                
-                elif ch.isprintable():
-                    if cursor_position == len(buffer):
-                        buffer += ch
-                        cursor_position += 1
-                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                        sys.stdout.write(ch)
-                        sys.stdout.flush()
-                    else:
-                        buffer = buffer[:cursor_position] + ch + buffer[cursor_position:]
-                        cursor_position += 1
-
-                        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-                        sys.stdout.write("\r\033[K") 
-                        sys.stdout.write(f"> {buffer}")
-                        if cursor_position < len(buffer):
-                            sys.stdout.write(f"\033[{len(buffer) - cursor_position}D")
-                        sys.stdout.flush()
-                
-            finally:
+            buffer, cursor_position, history_position = self._process_input(
+                char, action, buffer, cursor_position, history_position
+            )
+    
+    def _should_update_time_display(self, current_time, last_time_check, buffer):
+        time_elapsed = current_time - last_time_check > 0.5
+        can_interrupt = (self.client.time_update_pending and 
+                        not self.in_command_execution and 
+                        current_time - self.last_input_time > 1.0 and
+                        not buffer)
+        return time_elapsed and can_interrupt
+    
+    def _display_server_time(self, buffer):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            print(f"\rHora do servidor: {self.client.current_time}")
+            print("> " + buffer, end="", flush=True)
+            self.client.time_update_pending = False
+        finally:
+            termios.tcsetattr(fd, termios.TCSAFLUSH, old_settings)
+    
+    async def _read_keyboard_input(self):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        try:
+            tty.setraw(fd)
+            readable, _, _ = select.select([sys.stdin], [], [], 0.1)
+            
+            if not readable:
+                await asyncio.sleep(0.05)
+                return None, "none"
+            
+            ch = sys.stdin.read(1)
+            self.last_input_time = time.time()
+            
+            if ch == '\r':  
                 termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                print("\r")
+                return None, "return"
+            
+            elif ch == '\x03': 
+                termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+                print("\r\nOperação cancelada.")
+                return None, "cancel"
+            
+            elif ch in ('\x7f', '\b'): 
+                return ch, "backspace"
+            
+            elif ch == '\x1b': 
+                return self._read_escape_sequence(fd, old_settings)
+                
+            elif ch.isprintable():
+                return ch, "printable"
+                
+            return None, "none"
+                
+        finally:
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+    
+    def _read_escape_sequence(self, fd, old_settings):
+        next_chars = ""
+        readable, _, _ = select.select([sys.stdin], [], [], 0.1)
+        
+        if not readable:
+            return '\x1b', "escape"
+            
+        next_chars += sys.stdin.read(1)
+        if next_chars != '[':
+            return '\x1b' + next_chars, "escape_seq"
+            
+        readable, _, _ = select.select([sys.stdin], [], [], 0.1)
+        if not readable:
+            return '\x1b[', "escape_seq"
+            
+        next_chars += sys.stdin.read(1)
+        
+        if next_chars == '[A':
+            return None, "arrow_up"
+        elif next_chars == '[B':
+            return None, "arrow_down"
+        elif next_chars == '[C':
+            return None, "arrow_right"
+        elif next_chars == '[D':
+            return None, "arrow_left"
+        else:
+            return '\x1b' + next_chars, "escape_seq"
+    
+    def _process_input(self, char, action, buffer, cursor_position, history_position):
+        if action == "backspace":
+            return self._handle_backspace(buffer, cursor_position, history_position)
+        elif action.startswith("arrow_"):
+            return self._handle_arrow_key(action, buffer, cursor_position, history_position)
+        elif action == "printable":
+            return self._handle_printable_char(char, buffer, cursor_position, history_position)
+        else:
+            return buffer, cursor_position, history_position
+    
+    def _handle_backspace(self, buffer, cursor_position, history_position):
+        if cursor_position <= 0:
+            return buffer, cursor_position, history_position
+            
+        new_buffer = buffer[:cursor_position-1] + buffer[cursor_position:]
+        new_position = cursor_position - 1
+        
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        
+        sys.stdout.write("\r\033[K")
+        sys.stdout.write(f"> {new_buffer}")
+        
+        if new_position < len(new_buffer):
+            sys.stdout.write(f"\033[{len(new_buffer) - new_position}D")
+        
+        sys.stdout.flush()
+        
+        return new_buffer, new_position, history_position
+    
+    def _handle_arrow_key(self, action, buffer, cursor_position, history_position):
+        if action == "arrow_up":
+            return self._navigate_history_up(buffer, cursor_position, history_position)
+        elif action == "arrow_down":
+            return self._navigate_history_down(buffer, cursor_position, history_position)
+        elif action == "arrow_right":
+            return self._move_cursor_right(buffer, cursor_position, history_position)
+        elif action == "arrow_left":
+            return self._move_cursor_left(buffer, cursor_position, history_position)
+        
+        return buffer, cursor_position, history_position
+    
+    def _navigate_history_up(self, buffer, cursor_position, history_position):
+        if not self.command_history or history_position >= len(self.command_history) - 1:
+            return buffer, cursor_position, history_position
+            
+        new_history_position = history_position + 1
+        new_buffer = self.command_history[-(new_history_position+1)]
+        new_position = len(new_buffer)
+        
+        self._update_display_line(new_buffer)
+        
+        return new_buffer, new_position, new_history_position
+    
+    def _navigate_history_down(self, buffer, cursor_position, history_position):
+        if history_position <= 0:
+            new_history_position = -1
+            new_buffer = ""
+        else:
+            new_history_position = history_position - 1
+            new_buffer = self.command_history[-(new_history_position+1)]
+        
+        new_position = len(new_buffer)
+        self._update_display_line(new_buffer)
+        
+        return new_buffer, new_position, new_history_position
+    
+    def _move_cursor_right(self, buffer, cursor_position, history_position):
+        if cursor_position >= len(buffer):
+            return buffer, cursor_position, history_position
+            
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        
+        sys.stdout.write("\033[C")
+        sys.stdout.flush()
+        
+        return buffer, cursor_position + 1, history_position
+    
+    def _move_cursor_left(self, buffer, cursor_position, history_position):
+        if cursor_position <= 0:
+            return buffer, cursor_position, history_position
+            
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        
+        sys.stdout.write("\033[D")
+        sys.stdout.flush()
+        
+        return buffer, cursor_position - 1, history_position
+    
+    def _handle_printable_char(self, char, buffer, cursor_position, history_position):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        
+        if cursor_position == len(buffer):
+            new_buffer = buffer + char
+            new_position = cursor_position + 1
+            
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            sys.stdout.write(char)
+            sys.stdout.flush()
+        else:
+            new_buffer = buffer[:cursor_position] + char + buffer[cursor_position:]
+            new_position = cursor_position + 1
+            
+            termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+            sys.stdout.write("\r\033[K")
+            sys.stdout.write(f"> {new_buffer}")
+            
+            if new_position < len(new_buffer):
+                sys.stdout.write(f"\033[{len(new_buffer) - new_position}D")
+                
+            sys.stdout.flush()
+        
+        return new_buffer, new_position, history_position
+    
+    def _update_display_line(self, buffer):
+        fd = sys.stdin.fileno()
+        old_settings = termios.tcgetattr(fd)
+        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
+        
+        sys.stdout.write("\r\033[K")
+        sys.stdout.write(f"> {buffer}")
+        sys.stdout.flush()
     
     async def run(self):
         self._clear_screen()

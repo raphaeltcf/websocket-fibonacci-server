@@ -19,7 +19,6 @@ client = None
 
 def exit_handler():
     if client and client.connected:
-        # Criar uma nova tarefa assíncrona que será executada em um novo loop
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         try:
@@ -36,7 +35,6 @@ def handle_shutdown(signum, frame):
     logger.info(f"Sinal recebido {signum}, iniciando desligamento...")
     if client:
         client.running = False
-        # Executar aqui uma desconexão rápida
         loop = asyncio.get_event_loop()
         if loop.is_running():
             loop.create_task(client.send_disconnect_signal())
@@ -55,8 +53,7 @@ async def main():
     signal.signal(signal.SIGINT, handle_shutdown)
     signal.signal(signal.SIGTERM, handle_shutdown)
     
-    # Registrar também o sinal SIGHUP (terminal fechado)
-    if hasattr(signal, 'SIGHUP'):  # Não disponível no Windows
+    if hasattr(signal, 'SIGHUP'):
         signal.signal(signal.SIGHUP, handle_shutdown)
     
     success = await client.connect()
@@ -70,7 +67,6 @@ async def main():
     try:
         await cli_task
     finally:
-        # Garantir que tentamos enviar a desconexão mesmo se o cliente for encerrado abruptamente
         await client.send_disconnect_signal()
         await client.disconnect()
         receive_task.cancel()
